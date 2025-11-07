@@ -1,0 +1,8 @@
+{
+    "python.envFile": "${workspaceFolder}/.env",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}"
+    ],
+    "python.testing.cwd": "${workspaceFolder}",
+    "python.terminal.executeInFileDir": false
+}
