@@ -6,7 +6,7 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 # -------------------------------------------------
 
-import utils.constants
+from utils.constants import G, MASS_SUN, sound_speed
 
 # AIM: Develop a model for the 1D (radially symmetric Parker Solar Wind) with isothermal flow.
 
@@ -32,3 +32,9 @@ Extensions:
 - Add rotation.
 - Move to 1D time-dependent HD solver.
 """
+
+if __name__ == "__main__":
+    cs = sound_speed()
+    print("G: ", G)
+    print("MASS_SUN: ", MASS_SUN)
+    print("Sound Speed: ", cs)
