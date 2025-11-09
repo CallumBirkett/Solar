@@ -16,9 +16,8 @@ TEMP_CORONA = 1.5e6  # Coronal Temperature - [K]
 # Optional useful distances
 AU = 1.496e11  # astronomical unit [m]
 
+
 # Calculated constants
-
-
 def sound_speed(T=TEMP_CORONA, mmw=MMW):
     """
     Sound speed is how strongly pressure responds to compression.
