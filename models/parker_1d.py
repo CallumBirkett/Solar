@@ -58,23 +58,23 @@ def parker_rhs(r, u, G=G, M=MASS_SUN, cs=sound_speed()):
 
 if __name__ == "__main__":
 
-    # critical radius data.
+    # --- Critical radius data ---
     rc = parker_critical_radius()
     slope_c = parker_critical_slope()
     cs = sound_speed()
 
-    # 　Set starting points for the integration
+    # 　--- Integration starting points ---
     eps = 1e-3  # small distance away from critical radius
     r0_out = rc * (1 + eps)  # Away from Sun
     u0_out = cs + slope_c * (r0_out - rc)
     r0_in = rc * (1 - eps)  # Towards Sun
     u0_in = cs + slope_c * (r0_in - rc)
 
-    # system spans many orders of magnitude in radius, set dimensionless step-size
+    # --- Set dimensionless step size ---
     h_out = 1e-3 * rc
     h_in = 1e-3 * rc
 
-    # integrate numerical solution using rk45 solver
+    # --- RK45 Solver ---
     sol_out = solve_ivp(
         parker_rhs,
         (r0_out, rc * 50),
@@ -94,19 +94,19 @@ if __name__ == "__main__":
         dense_output=True,
     )
 
-    # comparisons at astronomical unit
+    # --- Comparisons at astronomical unit ---
     au_over_rc = AU / rc
     u_at_au = sol_out.sol(AU)[0]
     u_norm_at_au = u_at_au / cs
 
-    # Validation statements
+    # --- Validation statements ---
     # print("Sound Speed =", cs)
     # print("Critical Radius  =", rc)
     # print("Critical Radius / Solar Radius =", rc / RADIUS_SUN)
     # print("Critical Radius / AU =", rc / AU)
     # print("Teff =", MMW * MASS_PROTON * cs**2 / K_B)
 
-    # plotting
+    # --- Plotting ---
     plt.figure(figsize=(8, 5))
     plt.plot(sol_in.t / rc, sol_in.y[0] / cs, "r", label="Subsonic (inward)")
     plt.plot(sol_out.t / rc, sol_out.y[0] / cs, "b", label="Supersonic (outward)")
