@@ -62,33 +62,6 @@ def parker_rhs(r, u, G=G, M=MASS_SUN, cs=sound_speed()):
     return numerator / denominator
 
 
-# --- RK4 Integrator Leads to unstable colution below critical radius. RK45 solver now in use ---
-# # RK4 integrator step function
-# def rk4_step(f, r, u, h, args):
-#     """
-#     Calculation of slope based on a degree 4 Runge-Kutta method.
-#     """
-#     k1 = f(r, u, *args)
-#     k2 = f(r + 0.5 * h, u + 0.5 * h * k1, *args)
-#     k3 = f(r + 0.5 * h, u + 0.5 * h * k2, *args)
-#     k4 = f(r + h, u + h * k3, *args)
-#     return u + (h / 6) * (
-#         k1 + 2 * k2 + 2 * k3 + k4
-#     )  # return averaged contribution from slopes
-
-
-# # RK4 integration wrapper
-# def integrate_rk4(f, r0, u0, r_end, h, args):
-#     r, u = r0, u0
-#     rs, us = [r], [u]  # initialise arrays to hold radius data and resulting u calcs
-#     while (h > 0 and r < r_end) or (h < 0 and r > r_end):
-#         u = rk4_step(f, r, u, h, args)
-#         r += h
-#         rs.append(r)
-#         us.append(u)
-#     return np.array(rs), np.array(us)
-
-
 if __name__ == "__main__":
 
     # critical radius data.
@@ -142,7 +115,12 @@ if __name__ == "__main__":
     plt.figure(figsize=(8, 5))
     plt.plot(sol_in.t / rc, sol_in.y[0] / cs, "r", label="Subsonic (inward)")
     plt.plot(sol_out.t / rc, sol_out.y[0] / cs, "b", label="Supersonic (outward)")
+
+    # Lines to indicate transition around critical radius
     plt.axvline(1.0, color="k", ls="--", label="Critical radius")
+    plt.axhline(1.0, color="gray", ls=":")
+
+    # Comparisons to 1 AU
     plt.text(
         au_over_rc * 1.01,
         u_norm_at_au * 0.87,
@@ -152,7 +130,7 @@ if __name__ == "__main__":
         color="black",
     )
     plt.axvline(au_over_rc, color="mediumseagreen", ls="--", label="1 AU")
-    plt.axhline(1.0, color="gray", ls=":")
+
     plt.xlabel(r"$r / r_c$")
     plt.ylabel(r"$v / c_s$")
     plt.title("Parker Solar Wind - Subsonic and Supersonic Branches")
