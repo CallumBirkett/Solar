@@ -12,12 +12,6 @@ if ROOT not in sys.path:
 
 from utils.constants import *
 
-# AIM: Develop a model for the 1D (radially symmetric Parker Solar Wind) with isothermal flow.
-
-# Non-dimensionalize units
-
-# Model validation
-
 """
 Extensions:
 
@@ -105,11 +99,12 @@ if __name__ == "__main__":
     u_at_au = sol_out.sol(AU)[0]
     u_norm_at_au = u_at_au / cs
 
-    print("Sound Speed =", cs)
-    print("Critical Radius  =", rc)
-    print("Critical Radius / Solar Radius =", rc / RADIUS_SUN)
-    print("Critical Radius / AU =", rc / AU)
-    print("Teff =", MMW * MASS_PROTON * cs**2 / K_B)
+    # Validation statements
+    # print("Sound Speed =", cs)
+    # print("Critical Radius  =", rc)
+    # print("Critical Radius / Solar Radius =", rc / RADIUS_SUN)
+    # print("Critical Radius / AU =", rc / AU)
+    # print("Teff =", MMW * MASS_PROTON * cs**2 / K_B)
 
     # plotting
     plt.figure(figsize=(8, 5))
