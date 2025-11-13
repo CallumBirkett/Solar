@@ -28,7 +28,7 @@ Extensions:
 """
 
 
-# Calculated values
+# --- Calculated values ---
 def sound_speed(T=TEMP_CORONA, mmw=MMW):
     """
     Isothermal sound speed.
@@ -55,7 +55,7 @@ def parker_critical_slope(G=G, M=MASS_SUN, cs=sound_speed()):
     return cs / rc
 
 
-# ODE Definition
+# --- ODE Definition ---
 def parker_rhs(r, u, G=G, M=MASS_SUN, cs=sound_speed()):
     numerator = u * (2 * cs**2 / r - G * M / r**2)
     denominator = u**2 - cs**2  # blow-up when u = cs.
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     cs = sound_speed()
 
     # 　Set starting points for the integration
-    eps = 5e-3  # small distance away from critical radius
+    eps = 1e-3  # small distance away from critical radius
     r0_out = rc * (1 + eps)  # Away from Sun
     u0_out = cs + slope_c * (r0_out - rc)
     r0_in = rc * (1 - eps)  # Towards Sun
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     # integrate numerical solution using rk45 solver
     sol_out = solve_ivp(
         parker_rhs,
-        (r0_out, rc * 20),
+        (r0_out, rc * 50),
         [u0_out],
         method="RK45",
         rtol=1e-8,
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     )
     sol_in = solve_ivp(
         parker_rhs,
-        (r0_in, rc * 0.1),
+        (r0_in, RADIUS_SUN * (1 + eps)),  # integrate backwards towards Sun's surface
         [u0_in],
         method="RK45",
         rtol=1e-8,
@@ -127,27 +127,35 @@ if __name__ == "__main__":
         dense_output=True,
     )
 
-    # --- RK4 solver no longer in use ---
-    # r_out, u_out = integrate_rk4(
-    #     parker_rhs, r0_out, u0_out, rc * 20, h_out, (G, MASS_SUN, cs)
-    # )
-    # r_in, u_in = integrate_rk4(
-    #     parker_rhs, r0_out, u0_out, rc * 0.3, -h_in, (G, MASS_SUN, cs)
-    # )
+    # comparisons at astronomical unit
+    au_over_rc = AU / rc
+    u_at_au = sol_out.sol(AU)[0]
+    u_norm_at_au = u_at_au / cs
 
-    # join together values into one array
-    # r_all = np.concatenate([r_in[::-1], r_out])
-    # u_all = np.concatenate([u_in[::-1], u_out])
+    print("Sound Speed =", cs)
+    print("Critical Radius  =", rc)
+    print("Critical Radius / Solar Radius =", rc / RADIUS_SUN)
+    print("Critical Radius / AU =", rc / AU)
+    print("Teff =", MMW * MASS_PROTON * cs**2 / K_B)
 
     # plotting
     plt.figure(figsize=(8, 5))
     plt.plot(sol_in.t / rc, sol_in.y[0] / cs, "r", label="Subsonic (inward)")
     plt.plot(sol_out.t / rc, sol_out.y[0] / cs, "b", label="Supersonic (outward)")
-    plt.axvline(1.0, color="k", ls="--", label="Critical point")
+    plt.axvline(1.0, color="k", ls="--", label="Critical radius")
+    plt.text(
+        au_over_rc * 1.01,
+        u_norm_at_au * 0.87,
+        f"{u_norm_at_au:.2f} $c_s$",
+        va="center",
+        ha="left",
+        color="black",
+    )
+    plt.axvline(au_over_rc, color="mediumseagreen", ls="--", label="1 AU")
     plt.axhline(1.0, color="gray", ls=":")
     plt.xlabel(r"$r / r_c$")
     plt.ylabel(r"$v / c_s$")
-    plt.title("Parker Solar Wind – Subsonic and Supersonic Branches")
+    plt.title("Parker Solar Wind - Subsonic and Supersonic Branches")
     plt.legend()
     plt.grid(True)
     plt.show()
