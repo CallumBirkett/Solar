@@ -55,8 +55,6 @@ We CANNOT assume a polytropic equaiton of state when:
 - Add rotation.
 """
 
-
-# --- Calculated values ---
 # --- Calculated values ---
 eos = IsothermalEOS()  # initialize equation of state
 cs = eos.sound_speed()

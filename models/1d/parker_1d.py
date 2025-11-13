@@ -6,31 +6,6 @@ from scipy.integrate import solve_ivp
 from solar.utils.constants import *
 from solar.physics.equations_of_state import IsothermalEOS
 
-
-"""
-Extensions:
-
---- Polytropic equation of state ---
-Relation between gas pressure and density of the form P = K * rho ** gamma,
-where K is constant along stream liens and gamm is the polytropic index.
-
-This form of the relation is derived from the First Law of Thermodynamics
-for a fluid element.
-
-Isothermal -> dQ = 0 so no contribution from FLoT. 
-
-In an isothermal flow gamma = 1. 
-In an adiabatic flow gamme = 5 / 3.
-
-In reality, the solar wind is neither adiabatic or isothermal, so we assume the gas
-behaves with an effective polytropic index of 1 < gamma < 1.5.
-
-
-- Add heating terms.
-- Add rotation.
-"""
-
-
 # --- Calculated values ---
 eos = IsothermalEOS()  # initialize equation of state
 cs = eos.sound_speed()
