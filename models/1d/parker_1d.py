@@ -15,10 +15,24 @@ from utils.constants import *
 """
 Extensions:
 
-- Polytropic equation of state.
+--- Polytropic equation of state ---
+Relation between gas pressure and density of the form P = K * rho ** gamma,
+where K is constant along stream liens and gamm is the polytropic index.
+
+This form of the relation is derived from the First Law of Thermodynamics
+for a fluid element.
+
+Isothermal -> dQ = 0 so no contribution from FLoT. 
+
+In an isothermal flow gamma = 1. 
+In an adiabatic flow gamme = 5 / 3.
+
+In reality, the solar wind is neither adiabatic or isothermal, so we assume the gas
+behaves with an effective polytropic index of 1 < gamma < 1.5.
+
+
 - Add heating terms.
 - Add rotation.
-- Move to 1D time-dependent HD solver.
 """
 
 
@@ -51,6 +65,10 @@ def parker_critical_slope(G=G, M=MASS_SUN, cs=sound_speed()):
 
 # --- ODE Definition ---
 def parker_rhs(r, u, G=G, M=MASS_SUN, cs=sound_speed()):
+    """
+    Isothermal ODE in du/dr. Combination of mass conservation and Euler equation.
+    Isothermal -> no energy transfer so no need to include energy equaiton.
+    """
     numerator = u * (2 * cs**2 / r - G * M / r**2)
     denominator = u**2 - cs**2  # blow-up when u = cs.
     return numerator / denominator
