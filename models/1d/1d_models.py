@@ -1,6 +1,6 @@
-from solar.utils.constants import G, MASS_SUN, RADIUS_SUN
-from solar.physics.equations_of_state import IsothermalEOS
-from solar.numerics.solvers.rk import solve_ode
+from utils.constants import G, MASS_SUN, RADIUS_SUN
+from physics.equations_of_state import IsothermalEOS
+from numerics.solvers.rk import solve_ode
 
 class BaseModel1D:
     def rhs(self, r, u):

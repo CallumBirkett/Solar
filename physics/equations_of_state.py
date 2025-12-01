@@ -1,5 +1,5 @@
 import numpy as np
-from solar.utils.constants import K_B, MASS_PROTON, MMW, TEMP_CORONA
+from utils.constants import K_B, MASS_PROTON, MMW, TEMP_CORONA
 
 
 class EquationOfState:
