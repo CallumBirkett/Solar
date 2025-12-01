@@ -16,3 +16,4 @@ class IsothermalEOS(EquationOfState):
 
     def sound_speed(self):
         return np.sqrt(K_B * self.T / (self.mmw * MASS_PROTON))
+
