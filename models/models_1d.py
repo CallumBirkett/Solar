@@ -58,4 +58,4 @@ class ParkerIsothermal1D(BaseModel1D):
             [u0_in]
         )
 
-        return sol_out, sol_in
+        return sol_in, sol_out

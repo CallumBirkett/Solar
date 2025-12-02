@@ -13,5 +13,12 @@ def solve_ode(rhs, r_span, u0):
     outputs:
     solution - array - velocity profile out to limits of integration
     """
-    return solve_ivp(rhs, r_span, u0, method='RK45', rtol = 1e-8, atol=1e-10, dense_output = True)
+    return solve_ivp(rhs, 
+                    r_span, 
+                    u0,
+                    method='RK45',
+                    rtol = 1e-8,
+                    atol=1e-10, 
+                    dense_output = True # dense output allows evaluation for any time point - use sol(t)
+                )
 
