@@ -1,0 +1,22 @@
+from models.models_1d import ParkerIsothermal1D
+from physics.equations_of_state import IsothermalEOS
+from numerics.solvers.rk import solve_ode 
+from visualisation.visualisation_1d import plot_parker_velocity_profile
+
+import matplotlib.pyplot as plt 
+
+def main():
+    # define eos and model 
+    eos = IsothermalEOS()
+    model = ParkerIsothermal1D(eos)
+
+    # solve Parker ODE
+    sol_in, sol_out = model.solve()
+
+    # plotting
+    plot_parker_velocity_profile(model, sol_in, sol_out)
+    plt.show()
+
+
+if __name__ == "__main__":
+    main()

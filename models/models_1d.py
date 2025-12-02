@@ -15,7 +15,7 @@ class ParkerIsothermal1D(BaseModel1D):
         Expects isothermal equation of state from physics/equation_of_state
         """
         self.eos = eos
-        self.cs = eos.soundspeed()
+        self.cs = eos.sound_speed()
 
     def critical_radius(self):
         return G * MASS_SUN / (2 * self.cs ** 2)

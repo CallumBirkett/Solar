@@ -6,8 +6,8 @@ from utils.constants import AU, RADIUS_SUN
 
 def plot_parker_velocity_profile(
         model: Any,
-        sol_out: Any,
         sol_in: Any,
+        sol_out: Any,
         show_au: bool = True, # show au comparison and critical radius by default
         show_critical: bool = True,
         ax: Optional[plt.Axes] = None
