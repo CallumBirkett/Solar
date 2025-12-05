@@ -1,5 +1,5 @@
 import numpy as np
-from utils.constants import K_B, MASS_PROTON, MMW, TEMP_CORONA
+from utils.constants import K_B, MASS_PROTON, MMW, TEMP_CORONA, G, MASS_SUN
 
 
 class EquationOfState:
@@ -46,3 +46,5 @@ class PolytropicEOS(EquationOfState):
     def sound_speed(self, rho):
         rho = np.asarray(rho)
         return np.sqrt(self.gamma * self.K * rho ** (self.gamma - 1.0)) # definition of sound speed
+    
+    

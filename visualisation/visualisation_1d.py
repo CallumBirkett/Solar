@@ -10,6 +10,7 @@ def plot_parker_velocity_profile(
         sol_out: Any,
         show_au: bool = True, # show au comparison and critical radius by default
         show_critical: bool = True,
+        show_sol: bool = True,
         ax: Optional[plt.Axes] = None
 ):
     
@@ -49,8 +50,11 @@ def plot_parker_velocity_profile(
         ha="left",
         color="black",
     )
-    plt.axvline(au_over_rc, color="mediumseagreen", ls="--", label="1 AU")
+        plt.axvline(au_over_rc, color="mediumseagreen", ls="--", label="1 AU")
 
+    # Show solar surface    
+    if show_sol:
+        plt.axvline(0.0, color="k", ls="-", label="Solar radius")
 
     plt.xlabel(r"$r / r_c$")
     plt.ylabel(r"$u / c_s$")
