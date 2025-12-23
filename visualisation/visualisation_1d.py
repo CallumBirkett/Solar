@@ -17,9 +17,9 @@ def plot_parker_velocity_profile(
     if ax is None:
         fig,  ax = plt.subplots(figsize=(8,5))
 
-    # initialise model variables
-    cs = model.cs 
-    rc = model.critical_radius()
+    # Unified model interface 
+    cs = model.cs
+    rc = model.rc
 
     # normalise values
     r_in_norm = sol_in.t / rc

@@ -1,4 +1,4 @@
-from models.models_1d import ParkerIsothermal1D
+from models.models_1d import ParkerIsothermal1D, ParkerPolytropic1D
 from physics.equations_of_state import IsothermalEOS, PolytropicEOS
 from numerics.solvers.rk import solve_ode 
 from visualisation.visualisation_1d import plot_parker_velocity_profile
@@ -19,14 +19,19 @@ def isothermal1d():
     plt.show()
 
 def polytropic1d():
-    # give model params
     # define eos and model
-    # solve parker ode
-    # plotting
-    pass
-def main():
-    isothermal1d()
+    eos = PolytropicEOS()
+    model = ParkerPolytropic1D(eos)
 
+    # solve parker ode
+    sol_in, sol_out = model.solve()
+
+    # plotting
+    plot_parker_velocity_profile(model, sol_in, sol_out)
+    plt.show()
+
+def main():
+    polytropic1d()
 
 
 if __name__ == "__main__":

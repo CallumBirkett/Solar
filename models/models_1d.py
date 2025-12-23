@@ -18,12 +18,10 @@ class ParkerIsothermal1D(BaseModel1D):
         """
         self.eos = eos
         self.cs = eos.sound_speed()
-
-    def critical_radius(self):
-        return G * MASS_SUN / (2 * self.cs ** 2)
+        self.rc = G * MASS_SUN / (2 * self.cs ** 2)
     
     def critical_slope(self):
-        rc = self.critical_radius()
+        rc = self.rc
         return self.cs / rc 
     
     def rhs(self, r, u):
@@ -38,7 +36,7 @@ class ParkerIsothermal1D(BaseModel1D):
         """
 
         cs = self.cs
-        rc = self.critical_radius()
+        rc = self.rc
         slope_c = self.critical_slope()
 
         # 　--- Integration starting points ---
@@ -65,7 +63,7 @@ class ParkerIsothermal1D(BaseModel1D):
     
 
 class ParkerPolytropic1D(BaseModel1D):
-    def __init__(self, eos, rho0 = 10e-13, T0 = 1.5e6, u0=1e3, r0=RADIUS_SUN):
+    def __init__(self, eos, rho0 = 10e-13, T0 = 1.5e6, u0=1e3, r0=2.5*RADIUS_SUN):
         self.eos = eos
         self.gamma = eos.gamma
         self.K = eos.K
@@ -91,7 +89,7 @@ class ParkerPolytropic1D(BaseModel1D):
         """For non-isothermal solution. Compute critical sound speed from coronal 
             base by solving Bernoulli equation.
             Bernoulli energy is constant on streamlines."""
-        numerator = 0.5 * u0 ** 2 + (1 / gamma) * cs0 ** 2 - (G * M / r0)
+        numerator = 0.5 * u0 ** 2 +  cs0 ** 2 / (gamma - 1.0) - (G * M / r0)
         denominator = 1 / (gamma - 1.0) - 1.5
 
         # check for blow-up
@@ -103,7 +101,7 @@ class ParkerPolytropic1D(BaseModel1D):
         
         # check for physical solution
         if csc_squared <= 0:
-            raise ValueError("Computed critical sound speed squared and found it to be <= 0. Base conditions" \
+            raise ValueError("Computed critical sound speed squared and found it to be <= 0. Base conditions " \
             "incompatibile with transonic solution")
         
         return np.sqrt(csc_squared)
@@ -112,7 +110,7 @@ class ParkerPolytropic1D(BaseModel1D):
     ):
         disc_condition = 5.0 - 3.0 * gamma
         disc = 2.0 * (5.0 - 3.0 * gamma)
-        numerator = 2.0 * (1.0 - gamma) + np.sqrt(disc)
+        numerator = -2.0 * (1.0 - gamma) + np.sqrt(disc)
         denominator = gamma + 1.0
 
         if disc_condition < 0:
@@ -138,6 +136,10 @@ class ParkerPolytropic1D(BaseModel1D):
         csc = self.critical_sound_speed(self.gamma, self.cs0, self.u0, self.r0)
         rc = self.critical_radius(csc)
         slope_c = self.critical_slope(self.gamma, csc, rc)
+
+        # store for visualisation with common interface
+        self.cs = csc 
+        self.rc = rc
 
         # 　--- Integration starting points ---
         eps = 1e-3  # small distance away from critical radius
