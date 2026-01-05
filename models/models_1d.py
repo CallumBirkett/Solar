@@ -129,19 +129,27 @@ class ParkerPolytropic1D(BaseModel1D):
         
         return np.sqrt(csc_squared)
 
-    def critical_slope(self, gamma, csc, rc):
+    def critical_slopes(self, gamma: float, csc: float, rc: float):
+        """
+        Computes the possible critical slopes resulting from applying L'Hopital's rule to the Parker ODE.
+        """
         disc_condition = 5.0 - 3.0 * gamma
-
         if disc_condition < 0:
             raise ValueError("No real solutions for critical slope, gamma must be <= 5/3")
-    
-        disc = 2.0 * (5.0 - 3.0 * gamma)
-        numerator = -2.0 * (1.0 - gamma) + np.sqrt(disc)
-        denominator = gamma + 1.0
-        
-        uc = csc
 
-        return (uc / rc) * (numerator/denominator)
+        disc = 2.0 * disc_condition
+        root = np.sqrt(disc)
+
+        base = (csc / rc) / (gamma + 1.0)
+
+        numerator_pos = -2.0 * (1.0 - gamma) + root
+        numerator_neg = -2.0 * (1.0 - gamma) - root
+
+        slope_pos = base * numerator_pos
+        slope_neg = base * numerator_neg
+
+        return slope_pos, slope_neg
+
 
     def critical_point(self) -> CriticalPoint:
         csc = self.critical_sound_speed(self.gamma, self.cs0, self.u0, self.r0)
@@ -150,6 +158,129 @@ class ParkerPolytropic1D(BaseModel1D):
         uc = csc
         return CriticalPoint(rc=rc, uc=uc, cs_crit=csc, slope=slope)
     
+    def critical_point_candidates(self):
+        """
+        Return candidate CriticalPoint objects (one per L'Hôpital root).
+        Selection of the physical branch happens in solve() via trial integration.
+        """
+        csc = self.critical_sound_speed(self.gamma, self.cs0, self.u0, self.r0)
+        rc = self.critical_radius(csc)
+        uc = csc
+
+        slope_pos, slope_neg = self.critical_slopes(self.gamma, csc, rc)
+
+        cp_pos = CriticalPoint(rc=rc, uc=uc, cs_crit=csc, slope=slope_pos)
+        cp_neg = CriticalPoint(rc=rc, uc=uc, cs_crit=csc, slope=slope_neg)
+
+        return (cp_pos, cp_neg)
+    
+    def trial_integrate(self, cp: CriticalPoint, *, eps: float = 1e-3, delta: float = 5e-2):
+        """
+        Cheap integration near rc to test whether a candidate slope produces wind-like behavior.
+
+        Returns: (trial_in, trial_out, init_dict)
+        """
+        rc = cp.rc
+        uc = cp.uc
+        slope = cp.slope
+
+        # start points near rc 
+        r0_out = rc * (1.0 + eps)
+        u0_out = uc + slope * (r0_out - rc)
+
+        r0_in = rc * (1.0 - eps)
+        u0_in = uc + slope * (r0_in - rc)
+
+        # short probe targets
+        r1_out = rc * (1.0 + delta)
+
+        # Don't probe inward past the solar surface
+        r1_in_target = rc * (1.0 - delta)
+        r1_in = max(RADIUS_SUN * (1.0 + eps), r1_in_target)
+
+        # Outward probe
+        trial_out = solve_ode(self.rhs, (r0_out, r1_out), [u0_out])
+
+        # Inward probe (this is decreasing if r1_in < r0_in)
+        trial_in = solve_ode(self.rhs, (r0_in, r1_in), [u0_in])
+
+        init = {
+            "r0_out": r0_out, "u0_out": u0_out, "r1_out": r1_out,
+            "r0_in": r0_in, "u0_in": u0_in, "r1_in": r1_in,
+            "eps": eps, "delta": delta,
+        }
+
+        return trial_in, trial_out, init
+
+    def score_trial(self, trial_in, trial_out):
+        """
+        Lower is better. Return np.inf for invalid candidates.
+        """
+        import numpy as np
+
+        # Shape checks
+        if trial_out is None or trial_in is None:
+            return np.inf
+        if not hasattr(trial_out, "t") or not hasattr(trial_out, "y"):
+            return np.inf
+        if len(trial_out.t) < 2 or len(trial_in.t) < 2:
+            return np.inf
+
+        u_out = np.asarray(trial_out.y[0])
+        u_in  = np.asarray(trial_in.y[0])
+
+        # Check for physically consistent values
+        if not np.all(np.isfinite(u_out)) or not np.all(np.isfinite(u_in)):
+            return np.inf
+        if np.any(u_out <= 0) or np.any(u_in <= 0):
+            return np.inf
+
+        # Monotonic preferences near rc
+        u_out_start, u_out_end = float(u_out[0]), float(u_out[-1])
+        u_in_start,  u_in_end  = float(u_in[0]),  float(u_in[-1])
+
+        score = 0.0
+
+        # Outward should accelerate
+        if u_out_end <= u_out_start:
+            score += 100.0
+
+        # Inward should drop below uc as r decreases (typical wind-like subsonic branch)
+        if u_in_end >= u_in_start:
+            score += 100.0
+
+        # Prefer smoother (smaller absolute change) if both satisfy monotonicity
+        score += abs(u_out_end - u_out_start) * 0.1
+        score += abs(u_in_end - u_in_start) * 0.1
+
+        return score
+
+    def select_critical_point(self, *, eps: float = 1e-3, delta: float = 5e-2):
+        candidates = self.critical_point_candidates()
+
+        best = None
+        best_score = np.inf
+        diagnostics = []
+
+        for cp in candidates:
+            trial_in, trial_out, init = self.trial_integrate(cp, eps=eps, delta=delta)
+            s = self.score_trial(trial_in, trial_out)
+
+            diagnostics.append({
+                "slope": cp.slope,
+                "score": s,
+                **init
+            })
+
+            if s < best_score:
+                best_score = s
+                best = cp
+
+        if best is None or not np.isfinite(best_score):
+            raise RuntimeError(f"Could not select a physical critical slope. Diagnostics: {diagnostics}")
+
+        return best, diagnostics
+
     def rhs(self, r, u):
         cs = self.sound_speed(r, u)
         numerator = u * (2 * cs ** 2 / r - G * MASS_SUN / r ** 2)
@@ -157,31 +288,31 @@ class ParkerPolytropic1D(BaseModel1D):
         return numerator / denominator 
 
 
-    def solve(self, *, eps: float = 1e-3, r_max_factor: float = 50.0) -> Solution1D:
+    def solve(self, *, eps: float = 1e-3, r_max_factor: float = 50.0, delta: float = 5e-2) -> Solution1D:
+        cp, slope_diag = self.select_critical_point(eps=eps, delta=delta)
 
-        cp = self.critical_point()
-        rc, cs, slope_c = cp.rc, cp.cs_crit, cp.slope 
+        rc, uc, slope_c = cp.rc, cp.uc, cp.slope
 
         r0_out = rc * (1.0 + eps)
-        u0_out = cs + slope_c * (r0_out - rc)
+        u0_out = uc + slope_c * (r0_out - rc)
 
-        r0_in = rc *(1 - eps)
-        u0_in = cs + slope_c * (r0_in - rc)
+        r0_in = rc * (1.0 - eps)
+        u0_in = uc + slope_c * (r0_in - rc)
 
         sol_out = solve_ode(self.rhs, (r0_out, rc * r_max_factor), [u0_out])
-        sol_in = solve_ode(self.rhs, (r0_in, RADIUS_SUN * (1.0 + eps)), [u0_in])
+        sol_in  = solve_ode(self.rhs, (r0_in, RADIUS_SUN * (1.0 + eps)), [u0_in])
 
         return Solution1D(
-            model = self,
-            critical = cp,
+            model=self,
+            critical=cp,
             sol_in=sol_in,
             sol_out=sol_out,
-            meta = {
+            meta={
                 "eps": eps,
+                "delta": delta,
                 "r_max_factor": r_max_factor,
-                "r0_out": r0_out,
-                "r0_in": r0_in,
-                "u0_out": u0_out,
-                "u0_in": u0_in
+                "slope_diagnostics": slope_diag,
+                "r0_out": r0_out, "u0_out": u0_out,
+                "r0_in": r0_in, "u0_in": u0_in,
             }
         )
