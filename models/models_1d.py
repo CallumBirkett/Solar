@@ -1,6 +1,7 @@
 from utils.constants import G, MASS_SUN, RADIUS_SUN
 from physics.equations_of_state import IsothermalEOS, PolytropicEOS
 from numerics.solvers.rk import solve_ode
+from models.types import CriticalPoint
 
 import numpy as np
 
