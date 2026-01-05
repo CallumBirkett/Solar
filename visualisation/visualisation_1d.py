@@ -1,33 +1,28 @@
-# abstract out visualisation code here. Ideally generalalized visualisation pipelines for 1d/2d/3d models 
-from typing import Any, Optional
+from typing import Optional
 from matplotlib import pyplot as plt
 
 from utils.constants import AU, RADIUS_SUN
+from models.solutions import Solution1D
+
 
 def plot_parker_velocity_profile(
-        model: Any,
-        sol_in: Any,
-        sol_out: Any,
-        show_au: bool = True, # show au comparison and critical radius by default
-        show_critical: bool = True,
-        show_sol: bool = True,
-        ax: Optional[plt.Axes] = None
+    solution: Solution1D,
+    show_au: bool = True,
+    show_critical: bool = True,
+    show_sol: bool = True,
+    ax: Optional[plt.Axes] = None
 ):
-    
     if ax is None:
-        fig,  ax = plt.subplots(figsize=(8,5))
+        _, ax = plt.subplots(figsize=(8, 5))
 
-    # Unified model interface 
-    rc = model.rc
-    cs = model.cs_crit
+    # Normalization from critical point
+    rc = solution.rc
+    cs = solution.cs_crit
 
-    # normalise values
-    r_in_norm = sol_in.t / rc
-    r_out_norm = sol_out.t / rc
-    u_in_norm = sol_in.y[0] / cs 
-    u_out_norm = sol_out.y[0] / cs
+    # Normalized branches (dimensionless)
+    (r_in_norm, u_in_norm), (r_out_norm, u_out_norm) = solution.normalized_branches()
 
-    # main curves - joined in/out velocity profiles
+    # main curves
     ax.plot(r_in_norm, u_in_norm, "r", label="Subsonic (inward)")
     ax.plot(r_out_norm, u_out_norm, "b", label="Supersonic (outward)")
 
@@ -35,32 +30,35 @@ def plot_parker_velocity_profile(
     if show_critical:
         ax.axvline(1.0, color="k", ls="--", label="Critical radius")
         ax.axhline(1.0, color="gray", ls=":")
-    
+
     # AU comparison
     if show_au:
         au_over_rc = AU / rc
-        u_at_au = sol_out.sol(AU)[0]
-        u_norm_at_au = u_at_au / cs
 
-        ax.text(
-        au_over_rc * 1.01,  # horizontal position of label
-        u_norm_at_au * 0.87,  # vertical position of label
-        f"{u_norm_at_au:.2f} $c_s$",
-        va="center",
-        ha="left",
-        color="black",
-    )
+        # Only annotate u(AU) if dense output exists
+        if hasattr(solution.sol_out, "sol") and solution.sol_out.sol is not None:
+            u_at_au = solution.sol_out.sol(AU)[0]
+            u_norm_at_au = u_at_au / cs
+
+            ax.text(
+                au_over_rc * 1.01,
+                u_norm_at_au * 0.87,
+                f"{u_norm_at_au:.2f} $c_{{s,crit}}$",
+                va="center",
+                ha="left",
+                color="black",
+            )
+
         ax.axvline(au_over_rc, color="mediumseagreen", ls="--", label="1 AU")
 
-    # Show solar surface    
+    # Solar surface marker at R_sun/rc
     if show_sol:
-        ax.axvline(RADIUS_SUN / rc, color="k", ls="-", label="Solar radius")
+        ax.axvline(0.0, color="k", ls="-", label="Solar radius")
 
-    ax.xlabel(r"$r / r_c$")
-    ax.ylabel(r"$u / c_s$")
-    ax.title("Parker Solar Wind - Subsonic and Supersonic Branches")
+    ax.set_xlabel(r"$r / r_c$")
+    ax.set_ylabel(r"$u / c_{s,\mathrm{crit}}$")
+    ax.set_title("Parker Solar Wind - Subsonic and Supersonic Branches")
     ax.legend()
     ax.grid(True)
 
     return ax
-

@@ -2,12 +2,13 @@ from utils.constants import G, MASS_SUN, RADIUS_SUN
 from physics.equations_of_state import IsothermalEOS, PolytropicEOS
 from numerics.solvers.rk import solve_ode
 from models.types import CriticalPoint
+from models.solutions import Solution1D
 
 import numpy as np
 
 class BaseModel1D:
 
-    def critial_point(self):
+    def critical_point(self):
         raise NotImplementedError # any wind model must have a critical point
     
     @property # expose derived physics as read-only observables
@@ -16,7 +17,7 @@ class BaseModel1D:
     
     @property
     def cs_crit(self):
-        return self.sound_speed_crit().cs_crit
+        return self.critical_point().cs_crit
     
     @property
     def cs(self):
@@ -41,7 +42,7 @@ class ParkerIsothermal1D(BaseModel1D):
         """
         return cs / rc 
     
-    def critial_point(self):
+    def critical_point(self):
         cs = self.eos.sound_speed()
         rc = G * MASS_SUN / (2 * cs ** 2)
         slope = self.critical_slope(rc=rc, cs=cs)
@@ -54,41 +55,34 @@ class ParkerIsothermal1D(BaseModel1D):
         denominator = u ** 2 - cs ** 2
         return numerator / denominator 
     
-    def solve(self):
-        """
-        Run solve_ode inwards and outwards from the critical radius
-        """
+    def solve(self, *, eps: float = 1e-3, r_max_factor: float = 50.0) -> Solution1D:
 
         cp = self.critical_point()
-        # ensure physical results
-        assert cp.rc > 0 
-        assert cp.cs_crit > 0 
+        rc, cs, slope_c = cp.rc, cp.cs_crit, cp.slope 
 
-        rc = cp.rc
-        cs = cp.cs_crit
-        slope_c = cp.slope
-
-        # 　--- Integration starting points ---
-        eps = 1e-3  # small distance away from critical radius
-        r0_out = rc * (1 + eps)  # Away from Sun
+        r0_out = rc * (1.0 + eps)
         u0_out = cs + slope_c * (r0_out - rc)
-        r0_in = rc * (1 - eps)  # Towards Sun
+
+        r0_in = rc * (1 - eps)
         u0_in = cs + slope_c * (r0_in - rc)
 
+        sol_out = solve_ode(self.rhs, (r0_out, rc * r_max_factor), [u0_out])
+        sol_in = solve_ode(self.rhs, (r0_in, RADIUS_SUN * (1.0 + eps)), [u0_in])
 
-        # --- RK45 Solver ---
-        sol_out = solve_ode(
-            self.rhs,
-            (r0_out, rc * 50),
-            [u0_out]
+        return Solution1D(
+            model = self,
+            critical = cp,
+            sol_in=sol_in,
+            sol_out=sol_out,
+            meta = {
+                "eps": eps,
+                "r_max_factor": r_max_factor,
+                "r0_out": r0_out,
+                "r0_in": r0_in,
+                "u0_out": u0_out,
+                "u0_in": u0_in
+            }
         )
-        sol_in = solve_ode(
-            self.rhs,
-            (r0_in, RADIUS_SUN * (1 + eps)),  # integrate backwards towards Sun's surface
-            [u0_in]
-        )
-
-        return sol_in, sol_out
     
 
 class ParkerPolytropic1D(BaseModel1D):
@@ -162,35 +156,31 @@ class ParkerPolytropic1D(BaseModel1D):
         return numerator / denominator 
 
 
-    def solve(self):
-        """
-        Run solve_ode inwards and outwards from the critical radius
-        """
+    def solve(self, *, eps: float = 1e-3, r_max_factor: float = 50.0) -> Solution1D:
 
-        cp = self.critial_point()
-        rc = cp.rc
-        uc = cp.uc
-        slope_c = cp.slope
+        cp = self.critical_point()
+        rc, cs, slope_c = cp.rc, cp.cs_crit, cp.slope 
 
+        r0_out = rc * (1.0 + eps)
+        u0_out = cs + slope_c * (r0_out - rc)
 
-        # 　--- Integration starting points ---
-        eps = 1e-3  # small distance away from critical radius
-        r0_out = rc * (1 + eps)  # Away from Sun
-        u0_out = uc+ slope_c * (r0_out - rc)
-        r0_in = rc * (1 - eps)  # Towards Sun
-        u0_in = uc + slope_c * (r0_in - rc)
+        r0_in = rc *(1 - eps)
+        u0_in = cs + slope_c * (r0_out - rc)
 
+        sol_out = solve_ode(self.rhs, (r0_out, rc * r_max_factor), [u0_out])
+        sol_in = solve_ode(self.rhs, (r0_in, rc * r_max_factor), [u0_in])
 
-        # --- RK45 Solver ---
-        sol_out = solve_ode(
-            self.rhs,
-            (r0_out, rc * 50),
-            [u0_out]
+        return Solution1D(
+            model = self,
+            critical = cp,
+            sol_in=sol_in,
+            sol_out=sol_out,
+            mets = {
+                "eps": eps,
+                "r_max_factor": r_max_factor,
+                "r0_out": r0_out,
+                "r0_in": r0_in,
+                "u0_out": u0_out,
+                "u0_in": u0_in
+            }
         )
-        sol_in = solve_ode(
-            self.rhs,
-            (r0_in, RADIUS_SUN * (1 + eps)),  # integrate backwards towards Sun's surface
-            [u0_in]
-        )
-
-        return sol_in, sol_out
