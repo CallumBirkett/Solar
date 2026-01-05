@@ -11,8 +11,10 @@ def isothermal1d():
     eos = IsothermalEOS()
     model = ParkerIsothermal1D(eos)
 
+    # solve ODE
+    solution = model.solve()
+
     # plotting
-    solution = model.solve()  # returns Solution1D now
     plot_parker_velocity_profile(solution)
     plt.show()
 
@@ -21,13 +23,15 @@ def polytropic1d():
     eos = PolytropicEOS()
     model = ParkerPolytropic1D(eos)
 
-    # plotting
+    # solve ODE
     solution = model.solve()
+
+    # plotting
     plot_parker_velocity_profile(solution)
     plt.show()
 
 def main():
-    isothermal1d()
+    polytropic1d()
 
 
 if __name__ == "__main__":

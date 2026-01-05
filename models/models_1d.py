@@ -131,12 +131,13 @@ class ParkerPolytropic1D(BaseModel1D):
 
     def critical_slope(self, gamma, csc, rc):
         disc_condition = 5.0 - 3.0 * gamma
-        disc = 2.0 * (5.0 - 3.0 * gamma)
-        numerator = -2.0 * (1.0 - gamma) + np.sqrt(disc)
-        denominator = gamma + 1.0
 
         if disc_condition < 0:
             raise ValueError("No real solutions for critical slope, gamma must be <= 5/3")
+    
+        disc = 2.0 * (5.0 - 3.0 * gamma)
+        numerator = -2.0 * (1.0 - gamma) + np.sqrt(disc)
+        denominator = gamma + 1.0
         
         uc = csc
 
@@ -147,7 +148,7 @@ class ParkerPolytropic1D(BaseModel1D):
         rc = self.critical_radius(csc)
         slope = self.critical_slope(self.gamma, csc, rc)
         uc = csc
-        return CriticalPoint(rc=rc, us=uc, cs_crit=csc, slope=slope)
+        return CriticalPoint(rc=rc, uc=uc, cs_crit=csc, slope=slope)
     
     def rhs(self, r, u):
         cs = self.sound_speed(r, u)
@@ -165,17 +166,17 @@ class ParkerPolytropic1D(BaseModel1D):
         u0_out = cs + slope_c * (r0_out - rc)
 
         r0_in = rc *(1 - eps)
-        u0_in = cs + slope_c * (r0_out - rc)
+        u0_in = cs + slope_c * (r0_in - rc)
 
         sol_out = solve_ode(self.rhs, (r0_out, rc * r_max_factor), [u0_out])
-        sol_in = solve_ode(self.rhs, (r0_in, rc * r_max_factor), [u0_in])
+        sol_in = solve_ode(self.rhs, (r0_in, RADIUS_SUN * (1.0 + eps)), [u0_in])
 
         return Solution1D(
             model = self,
             critical = cp,
             sol_in=sol_in,
             sol_out=sol_out,
-            mets = {
+            meta = {
                 "eps": eps,
                 "r_max_factor": r_max_factor,
                 "r0_out": r0_out,
