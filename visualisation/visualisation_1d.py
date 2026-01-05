@@ -33,8 +33,8 @@ def plot_parker_velocity_profile(
 
     # critical radius lines
     if show_critical:
-        plt.axvline(1.0, color="k", ls="--", label="Critical radius")
-        plt.axhline(1.0, color="gray", ls=":")
+        ax.axvline(1.0, color="k", ls="--", label="Critical radius")
+        ax.axhline(1.0, color="gray", ls=":")
     
     # AU comparison
     if show_au:
@@ -42,7 +42,7 @@ def plot_parker_velocity_profile(
         u_at_au = sol_out.sol(AU)[0]
         u_norm_at_au = u_at_au / cs
 
-        plt.text(
+        ax.text(
         au_over_rc * 1.01,  # horizontal position of label
         u_norm_at_au * 0.87,  # vertical position of label
         f"{u_norm_at_au:.2f} $c_s$",
@@ -54,13 +54,13 @@ def plot_parker_velocity_profile(
 
     # Show solar surface    
     if show_sol:
-        ax.axvline(0.0, color="k", ls="-", label="Solar radius")
+        ax.axvline(RADIUS_SUN / rc, color="k", ls="-", label="Solar radius")
 
-    plt.xlabel(r"$r / r_c$")
-    plt.ylabel(r"$u / c_s$")
-    plt.title("Parker Solar Wind - Subsonic and Supersonic Branches")
-    plt.legend()
-    plt.grid(True)
+    ax.xlabel(r"$r / r_c$")
+    ax.ylabel(r"$u / c_s$")
+    ax.title("Parker Solar Wind - Subsonic and Supersonic Branches")
+    ax.legend()
+    ax.grid(True)
 
     return ax
 
