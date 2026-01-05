@@ -6,6 +6,22 @@ from models.types import CriticalPoint
 import numpy as np
 
 class BaseModel1D:
+
+    def critial_point(self):
+        raise NotImplementedError # any wind model must have a critical point
+    
+    @property # expose derived physics as read-only observables
+    def rc(self):
+        return self.critical_point().rc
+    
+    @property
+    def cs_crit(self):
+        return self.sound_speed_crit().cs_crit
+    
+    @property
+    def cs(self):
+        return self.cs_crit 
+    
     def rhs(self, r, u):
         raise NotImplementedError
     
@@ -18,15 +34,22 @@ class ParkerIsothermal1D(BaseModel1D):
         Expects isothermal equation of state from physics/equation_of_state
         """
         self.eos = eos
-        self.cs = eos.sound_speed()
-        self.rc = G * MASS_SUN / (2 * self.cs ** 2)
     
-    def critical_slope(self):
-        rc = self.rc
-        return self.cs / rc 
+    def critical_slope(self, rc, cs):
+        """
+        A helper function for calculating critical point data
+        """
+        return cs / rc 
+    
+    def critial_point(self):
+        cs = self.eos.sound_speed()
+        rc = G * MASS_SUN / (2 * cs ** 2)
+        slope = self.critical_slope(rc=rc, cs=cs)
+        uc = cs # universal critical speed
+        return CriticalPoint(rc=rc, uc=uc, cs_crit=cs, slope=slope) # return dataclass object (with builtin constructor)
     
     def rhs(self, r, u):
-        cs = self.cs
+        cs = self.cs_crit
         numerator = u * (2 * cs ** 2 / r - G * MASS_SUN / r ** 2)
         denominator = u ** 2 - cs ** 2
         return numerator / denominator 
@@ -36,9 +59,14 @@ class ParkerIsothermal1D(BaseModel1D):
         Run solve_ode inwards and outwards from the critical radius
         """
 
-        cs = self.cs
-        rc = self.rc
-        slope_c = self.critical_slope()
+        cp = self.critical_point()
+        # ensure physical results
+        assert cp.rc > 0 
+        assert cp.cs_crit > 0 
+
+        rc = cp.rc
+        cs = cp.cs_crit
+        slope_c = cp.slope
 
         # 　--- Integration starting points ---
         eps = 1e-3  # small distance away from critical radius
@@ -107,8 +135,7 @@ class ParkerPolytropic1D(BaseModel1D):
         
         return np.sqrt(csc_squared)
 
-    def critical_slope(self, gamma, csc, rc
-    ):
+    def critical_slope(self, gamma, csc, rc):
         disc_condition = 5.0 - 3.0 * gamma
         disc = 2.0 * (5.0 - 3.0 * gamma)
         numerator = -2.0 * (1.0 - gamma) + np.sqrt(disc)
@@ -121,6 +148,12 @@ class ParkerPolytropic1D(BaseModel1D):
 
         return (uc / rc) * (numerator/denominator)
 
+    def critical_point(self) -> CriticalPoint:
+        csc = self.critical_sound_speed(self.gamma, self.cs0, self.u0, self.r0)
+        rc = self.critical_radius(csc)
+        slope = self.critical_slope(self.gamma, csc, rc)
+        uc = csc
+        return CriticalPoint(rc=rc, us=uc, cs_crit=csc, slope=slope)
     
     def rhs(self, r, u):
         cs = self.sound_speed(r, u)
@@ -134,20 +167,18 @@ class ParkerPolytropic1D(BaseModel1D):
         Run solve_ode inwards and outwards from the critical radius
         """
 
-        csc = self.critical_sound_speed(self.gamma, self.cs0, self.u0, self.r0)
-        rc = self.critical_radius(csc)
-        slope_c = self.critical_slope(self.gamma, csc, rc)
+        cp = self.critial_point()
+        rc = cp.rc
+        uc = cp.uc
+        slope_c = cp.slope
 
-        # store for visualisation with common interface
-        self.cs = csc 
-        self.rc = rc
 
         # 　--- Integration starting points ---
         eps = 1e-3  # small distance away from critical radius
         r0_out = rc * (1 + eps)  # Away from Sun
-        u0_out = csc + slope_c * (r0_out - rc)
+        u0_out = uc+ slope_c * (r0_out - rc)
         r0_in = rc * (1 - eps)  # Towards Sun
-        u0_in = csc + slope_c * (r0_in - rc)
+        u0_in = uc + slope_c * (r0_in - rc)
 
 
         # --- RK45 Solver ---

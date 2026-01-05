@@ -18,8 +18,8 @@ def plot_parker_velocity_profile(
         fig,  ax = plt.subplots(figsize=(8,5))
 
     # Unified model interface 
-    cs = model.cs
     rc = model.rc
+    cs = model.cs_crit
 
     # normalise values
     r_in_norm = sol_in.t / rc
@@ -50,11 +50,11 @@ def plot_parker_velocity_profile(
         ha="left",
         color="black",
     )
-        plt.axvline(au_over_rc, color="mediumseagreen", ls="--", label="1 AU")
+        ax.axvline(au_over_rc, color="mediumseagreen", ls="--", label="1 AU")
 
     # Show solar surface    
     if show_sol:
-        plt.axvline(0.0, color="k", ls="-", label="Solar radius")
+        ax.axvline(0.0, color="k", ls="-", label="Solar radius")
 
     plt.xlabel(r"$r / r_c$")
     plt.ylabel(r"$u / c_s$")
